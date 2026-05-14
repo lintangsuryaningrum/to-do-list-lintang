@@ -122,127 +122,156 @@ function TodoPage() {
   });
 
   return (
-    <main className="min-h-screen bg-background pb-24">
-      <div className="mx-auto w-full max-w-md">
-        {/* Top bar */}
-        <header className="flex items-center justify-between px-6 pt-8">
-          <button className="flex h-10 w-10 items-center justify-center rounded-xl bg-card shadow-sm">
-            <Menu className="h-4 w-4 text-foreground" />
-          </button>
-          <div className="flex h-10 w-10 items-center justify-center rounded-full brand-gradient text-sm font-semibold text-primary-foreground shadow-[var(--shadow-soft)]">
+    <main className="min-h-screen bg-background pb-24 lg:pb-10">
+      <div className="mx-auto flex w-full max-w-md gap-8 lg:max-w-6xl lg:px-8 lg:pt-8">
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:flex lg:w-20 lg:shrink-0 lg:flex-col lg:items-center lg:gap-6 lg:rounded-3xl lg:bg-card lg:py-6 lg:shadow-sm">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl brand-gradient text-sm font-bold text-primary-foreground shadow-[var(--shadow-soft)]">
             J
           </div>
-        </header>
-
-        {/* Greeting */}
-        <section className="px-6 pt-6">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Hello, <span className="brand-gradient-text">John!</span>
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">Have a nice day, {dateStr}</p>
-        </section>
-
-        {/* Filter chips */}
-        <section className="mt-6 flex gap-2 overflow-x-auto px-6 pb-1">
-          {(Object.keys(FILTER_LABELS) as Filter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={cn(
-                "shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition-all",
-                filter === f
-                  ? "brand-gradient text-primary-foreground shadow-[var(--shadow-soft)]"
-                  : "bg-card text-foreground/70 hover:text-foreground"
-              )}
-            >
-              {FILTER_LABELS[f]}
-            </button>
-          ))}
-        </section>
-
-        {/* Stat cards */}
-        <section className="mt-5 grid grid-cols-2 gap-3 px-6">
-          <StatCard
-            label="In progress"
-            count={totalCount - doneCount}
-            tint="from"
-            progress={totalCount === 0 ? 0 : 100 - progress}
-          />
-          <StatCard
-            label="Completed"
-            count={doneCount}
-            tint="to"
-            progress={progress}
-          />
-        </section>
-
-        {/* Progress section */}
-        <section className="mt-7 px-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-bold">Progress</h2>
-            <button
-              onClick={() => setShowInput((s) => !s)}
-              className="flex h-9 items-center gap-1.5 rounded-full brand-gradient px-3.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-soft)] transition-transform active:scale-95"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add Task
-            </button>
-          </div>
-
-          {/* Inline add input */}
-          {showInput && (
-            <form
-              onSubmit={addTask}
-              className="task-enter mb-3 flex gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm"
-            >
-              <input
-                autoFocus
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="What's on your mind?"
-                maxLength={200}
-                disabled={adding}
-                className="flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
-              />
+          <div className="mt-2 flex flex-col gap-2">
+            {[Home, Calendar, FileText, User].map((Icon, i) => (
               <button
-                type="submit"
-                disabled={adding || !title.trim()}
-                className="flex h-9 w-9 items-center justify-center rounded-xl brand-gradient text-primary-foreground disabled:opacity-50"
-              >
-                {adding ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Check className="h-4 w-4" />
+                key={i}
+                className={cn(
+                  "flex h-11 w-11 items-center justify-center rounded-2xl transition-colors",
+                  i === 0
+                    ? "bg-secondary text-primary"
+                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                 )}
+              >
+                <Icon className="h-5 w-5" />
               </button>
-            </form>
-          )}
+            ))}
+          </div>
+        </aside>
 
-          {/* Task list */}
-          <ul className="space-y-3">
-            {loading ? (
-              <li className="flex items-center justify-center rounded-2xl bg-card py-10 text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Loading…
-              </li>
-            ) : filtered.length === 0 ? (
-              <EmptyState filter={filter} />
-            ) : (
-              filtered.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onToggle={() => toggleTask(task)}
-                  onDelete={() => deleteTask(task.id)}
-                />
-              ))
-            )}
-          </ul>
-        </section>
+        <div className="min-w-0 flex-1">
+          {/* Top bar — mobile only */}
+          <header className="flex items-center justify-between px-6 pt-8 lg:hidden">
+            <button className="flex h-10 w-10 items-center justify-center rounded-xl bg-card shadow-sm">
+              <Menu className="h-4 w-4 text-foreground" />
+            </button>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full brand-gradient text-sm font-semibold text-primary-foreground shadow-[var(--shadow-soft)]">
+              J
+            </div>
+          </header>
+
+          {/* Greeting */}
+          <section className="px-6 pt-6 lg:px-0 lg:pt-0">
+            <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">
+              Hello, <span className="brand-gradient-text">John!</span>
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Have a nice day, {dateStr}
+            </p>
+          </section>
+
+          {/* Filter chips */}
+          <section className="mt-6 flex gap-2 overflow-x-auto px-6 pb-1 lg:px-0">
+            {(Object.keys(FILTER_LABELS) as Filter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={cn(
+                  "shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition-all",
+                  filter === f
+                    ? "brand-gradient text-primary-foreground shadow-[var(--shadow-soft)]"
+                    : "bg-card text-foreground/70 hover:text-foreground"
+                )}
+              >
+                {FILTER_LABELS[f]}
+              </button>
+            ))}
+          </section>
+
+          {/* Desktop two-column area */}
+          <div className="lg:mt-6 lg:grid lg:grid-cols-5 lg:gap-6">
+            {/* Stat cards */}
+            <section className="mt-5 grid grid-cols-2 gap-3 px-6 lg:col-span-2 lg:mt-0 lg:grid-cols-1 lg:px-0">
+              <StatCard
+                label="In progress"
+                count={totalCount - doneCount}
+                tint="from"
+                progress={totalCount === 0 ? 0 : 100 - progress}
+              />
+              <StatCard
+                label="Completed"
+                count={doneCount}
+                tint="to"
+                progress={progress}
+              />
+            </section>
+
+            {/* Progress section */}
+            <section className="mt-7 px-6 lg:col-span-3 lg:mt-0 lg:px-0">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-base font-bold lg:text-lg">Progress</h2>
+                <button
+                  onClick={() => setShowInput((s) => !s)}
+                  className="flex h-9 items-center gap-1.5 rounded-full brand-gradient px-3.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-soft)] transition-transform active:scale-95"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Task
+                </button>
+              </div>
+
+              {/* Inline add input */}
+              {showInput && (
+                <form
+                  onSubmit={addTask}
+                  className="task-enter mb-3 flex gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm"
+                >
+                  <input
+                    autoFocus
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="What's on your mind?"
+                    maxLength={200}
+                    disabled={adding}
+                    className="flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
+                  />
+                  <button
+                    type="submit"
+                    disabled={adding || !title.trim()}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl brand-gradient text-primary-foreground disabled:opacity-50"
+                  >
+                    {adding ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {/* Task list */}
+              <ul className="space-y-3">
+                {loading ? (
+                  <li className="flex items-center justify-center rounded-2xl bg-card py-10 text-muted-foreground">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading…
+                  </li>
+                ) : filtered.length === 0 ? (
+                  <EmptyState filter={filter} />
+                ) : (
+                  filtered.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      onToggle={() => toggleTask(task)}
+                      onDelete={() => deleteTask(task.id)}
+                    />
+                  ))
+                )}
+              </ul>
+            </section>
+          </div>
+        </div>
       </div>
 
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-1/2 flex w-full max-w-md -translate-x-1/2 items-center justify-around border-t border-border/60 bg-card/95 px-6 py-3 backdrop-blur">
+      {/* Mobile bottom nav */}
+      <nav className="fixed bottom-0 left-1/2 flex w-full max-w-md -translate-x-1/2 items-center justify-around border-t border-border/60 bg-card/95 px-6 py-3 backdrop-blur lg:hidden">
         {[Home, Calendar, FileText, User].map((Icon, i) => (
           <button
             key={i}
