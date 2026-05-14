@@ -62,17 +62,17 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --radius: 0.875rem;
+  --background: oklch(0.985 0.005 250);
+  --foreground: oklch(0.18 0.04 265);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
+  --primary: oklch(0.55 0.22 268);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.96 0.01 260);
+  --secondary-foreground: oklch(0.25 0.04 265);
   --muted: oklch(0.968 0.007 247.896);
   --muted-foreground: oklch(0.554 0.046 257.417);
   --accent: oklch(0.968 0.007 247.896);
@@ -141,4 +141,44 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+}
+
+@theme inline {
+  --color-gradient-from: var(--gradient-from);
+  --color-gradient-to: var(--gradient-to);
+}
+
+:root {
+  --gradient-from: oklch(0.55 0.22 268);
+  --gradient-to: oklch(0.65 0.20 320);
+  --shadow-soft: 0 10px 40px -10px oklch(0.55 0.22 268 / 0.25);
+  --shadow-card: 0 1px 3px oklch(0.18 0.04 265 / 0.05), 0 8px 24px -8px oklch(0.18 0.04 265 / 0.08);
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-out {
+  to { opacity: 0; transform: translateX(8px); }
+}
+
+.task-enter { animation: slide-in 0.25s ease-out; }
+.task-exit { animation: fade-out 0.2s ease-in forwards; }
+
+.app-bg {
+  background:
+    radial-gradient(1000px 500px at 80% -10%, oklch(0.55 0.22 268 / 0.10), transparent 60%),
+    radial-gradient(800px 400px at -10% 100%, oklch(0.65 0.20 320 / 0.08), transparent 60%),
+    var(--background);
+}
+
+.brand-gradient {
+  background: linear-gradient(135deg, var(--gradient-from), var(--gradient-to));
+}
+.brand-gradient-text {
+  background: linear-gradient(135deg, var(--gradient-from), var(--gradient-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
