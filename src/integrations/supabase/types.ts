@@ -18,18 +18,21 @@ export type Database = {
         Row: {
           completed: boolean
           created_at: string
+          due_date: string | null
           id: string
           title: string
         }
         Insert: {
           completed?: boolean
           created_at?: string
+          due_date?: string | null
           id?: string
           title: string
         }
         Update: {
           completed?: boolean
           created_at?: string
+          due_date?: string | null
           id?: string
           title?: string
         }

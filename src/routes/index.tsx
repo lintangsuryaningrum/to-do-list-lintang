@@ -7,14 +7,19 @@ import {
   Loader2,
   Menu,
   Home,
-  Calendar,
+  Calendar as CalendarIcon,
   FileText,
   User,
   Check,
+  Bell,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { format, isSameDay, isToday, isPast } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export const Route = createFileRoute("/")({
   component: TodoPage,
@@ -25,6 +30,7 @@ type Task = {
   title: string;
   completed: boolean;
   created_at: string;
+  due_date: string | null;
 };
 
 type Filter = "all" | "active" | "completed";
@@ -40,8 +46,10 @@ function TodoPage() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
+  const [dueDate, setDueDate] = useState<Date | undefined>();
   const [filter, setFilter] = useState<Filter>("all");
   const [showInput, setShowInput] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<Date | undefined>();
 
   useEffect(() => {
     void load();
@@ -54,7 +62,7 @@ function TodoPage() {
       .select("*")
       .order("created_at", { ascending: false });
     if (error) toast.error("Failed to load tasks");
-    else setTasks(data ?? []);
+    else setTasks((data ?? []) as Task[]);
     setLoading(false);
   }
 
@@ -65,7 +73,7 @@ function TodoPage() {
     setAdding(true);
     const { data, error } = await supabase
       .from("tasks")
-      .insert({ title: value })
+      .insert({ title: value, due_date: dueDate ? dueDate.toISOString() : null })
       .select()
       .single();
     setAdding(false);
@@ -73,8 +81,9 @@ function TodoPage() {
       toast.error("Could not add task");
       return;
     }
-    setTasks((t) => [data, ...t]);
+    setTasks((t) => [data as Task, ...t]);
     setTitle("");
+    setDueDate(undefined);
     setShowInput(false);
     toast.success("Task added");
   }
@@ -105,14 +114,28 @@ function TodoPage() {
   }
 
   const filtered = useMemo(() => {
-    if (filter === "active") return tasks.filter((t) => !t.completed);
-    if (filter === "completed") return tasks.filter((t) => t.completed);
-    return tasks;
-  }, [tasks, filter]);
+    let list = tasks;
+    if (filter === "active") list = list.filter((t) => !t.completed);
+    if (filter === "completed") list = list.filter((t) => t.completed);
+    if (selectedDay) {
+      list = list.filter(
+        (t) => t.due_date && isSameDay(new Date(t.due_date), selectedDay)
+      );
+    }
+    return list;
+  }, [tasks, filter, selectedDay]);
 
   const totalCount = tasks.length;
   const doneCount = tasks.filter((t) => t.completed).length;
   const progress = totalCount === 0 ? 0 : Math.round((doneCount / totalCount) * 100);
+
+  const datesWithTasks = useMemo(
+    () =>
+      tasks
+        .filter((t) => t.due_date)
+        .map((t) => new Date(t.due_date as string)),
+    [tasks]
+  );
 
   const today = new Date();
   const dateStr = today.toLocaleDateString("en-US", {
@@ -130,7 +153,7 @@ function TodoPage() {
             J
           </div>
           <div className="mt-2 flex flex-col gap-2">
-            {[Home, Calendar, FileText, User].map((Icon, i) => (
+            {[Home, CalendarIcon, FileText, User].map((Icon, i) => (
               <button
                 key={i}
                 className={cn(
@@ -168,7 +191,7 @@ function TodoPage() {
           </section>
 
           {/* Filter chips */}
-          <section className="mt-6 flex gap-2 overflow-x-auto px-6 pb-1 lg:px-0">
+          <section className="mt-6 flex items-center gap-2 overflow-x-auto px-6 pb-1 lg:px-0">
             {(Object.keys(FILTER_LABELS) as Filter[]).map((f) => (
               <button
                 key={f}
@@ -183,30 +206,39 @@ function TodoPage() {
                 {FILTER_LABELS[f]}
               </button>
             ))}
+            {selectedDay && (
+              <button
+                onClick={() => setSelectedDay(undefined)}
+                className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-secondary px-3 py-2 text-xs font-medium text-primary"
+              >
+                {format(selectedDay, "MMM d")}
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </section>
 
-          {/* Desktop two-column area */}
+          {/* Main two-column layout on desktop */}
           <div className="lg:mt-6 lg:grid lg:grid-cols-5 lg:gap-6">
-            {/* Stat cards */}
-            <section className="mt-5 grid grid-cols-2 gap-3 px-6 lg:col-span-2 lg:mt-0 lg:grid-cols-1 lg:px-0">
-              <StatCard
-                label="In progress"
-                count={totalCount - doneCount}
-                tint="from"
-                progress={totalCount === 0 ? 0 : 100 - progress}
-              />
-              <StatCard
-                label="Completed"
-                count={doneCount}
-                tint="to"
+            {/* Left column: progress + calendar */}
+            <div className="mt-5 px-6 lg:col-span-2 lg:mt-0 lg:px-0">
+              <ProgressCard
+                done={doneCount}
+                total={totalCount}
                 progress={progress}
               />
-            </section>
+              <CalendarCard
+                datesWithTasks={datesWithTasks}
+                selected={selectedDay}
+                onSelect={setSelectedDay}
+              />
+            </div>
 
-            {/* Progress section */}
+            {/* Right column: tasks */}
             <section className="mt-7 px-6 lg:col-span-3 lg:mt-0 lg:px-0">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-base font-bold lg:text-lg">Progress</h2>
+                <h2 className="text-base font-bold lg:text-lg">
+                  {selectedDay ? format(selectedDay, "EEEE, MMM d") : "Progress"}
+                </h2>
                 <button
                   onClick={() => setShowInput((s) => !s)}
                   className="flex h-9 items-center gap-1.5 rounded-full brand-gradient px-3.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-soft)] transition-transform active:scale-95"
@@ -216,11 +248,11 @@ function TodoPage() {
                 </button>
               </div>
 
-              {/* Inline add input */}
+              {/* Inline add form */}
               {showInput && (
                 <form
                   onSubmit={addTask}
-                  className="task-enter mb-3 flex gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm"
+                  className="task-enter mb-3 space-y-2 rounded-2xl border border-border bg-card p-3 shadow-sm"
                 >
                   <input
                     autoFocus
@@ -229,19 +261,60 @@ function TodoPage() {
                     placeholder="What's on your mind?"
                     maxLength={200}
                     disabled={adding}
-                    className="flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
+                    className="w-full bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
                   />
-                  <button
-                    type="submit"
-                    disabled={adding || !title.trim()}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl brand-gradient text-primary-foreground disabled:opacity-50"
-                  >
-                    {adding ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Check className="h-4 w-4" />
-                    )}
-                  </button>
+                  <div className="flex items-center justify-between gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className={cn(
+                            "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                            dueDate
+                              ? "bg-secondary text-primary"
+                              : "bg-secondary/60 text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          <Bell className="h-3.5 w-3.5" />
+                          {dueDate ? format(dueDate, "MMM d") : "Set reminder"}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={dueDate}
+                          onSelect={setDueDate}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+
+                    <div className="flex gap-1">
+                      {dueDate && (
+                        <button
+                          type="button"
+                          onClick={() => setDueDate(undefined)}
+                          className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-muted-foreground hover:text-foreground"
+                          aria-label="Clear date"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button
+                        type="submit"
+                        disabled={adding || !title.trim()}
+                        className="flex h-9 items-center gap-1.5 rounded-xl brand-gradient px-4 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+                      >
+                        {adding ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                        Add
+                      </button>
+                    </div>
+                  </div>
                 </form>
               )}
 
@@ -253,7 +326,7 @@ function TodoPage() {
                     Loading…
                   </li>
                 ) : filtered.length === 0 ? (
-                  <EmptyState filter={filter} />
+                  <EmptyState filter={filter} hasDayFilter={!!selectedDay} />
                 ) : (
                   filtered.map((task) => (
                     <TaskRow
@@ -272,7 +345,7 @@ function TodoPage() {
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-1/2 flex w-full max-w-md -translate-x-1/2 items-center justify-around border-t border-border/60 bg-card/95 px-6 py-3 backdrop-blur lg:hidden">
-        {[Home, Calendar, FileText, User].map((Icon, i) => (
+        {[Home, CalendarIcon, FileText, User].map((Icon, i) => (
           <button
             key={i}
             className={cn(
@@ -288,71 +361,99 @@ function TodoPage() {
   );
 }
 
-function StatCard({
-  label,
-  count,
-  tint,
+function ProgressCard({
+  done,
+  total,
   progress,
 }: {
-  label: string;
-  count: number;
-  tint: "from" | "to";
+  done: number;
+  total: number;
   progress: number;
 }) {
+  const radius = 40;
+  const circ = 2 * Math.PI * radius;
+  const offset = circ - (progress / 100) * circ;
+
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-2xl p-4 shadow-[var(--shadow-soft)]",
-        tint === "from" ? "brand-gradient" : "bg-card border border-border shadow-sm"
-      )}
-    >
-      <div
-        className={cn(
-          "text-[11px] font-medium uppercase tracking-wide",
-          tint === "from" ? "text-primary-foreground/80" : "text-muted-foreground"
-        )}
-      >
-        {label}
+    <div className="relative overflow-hidden rounded-3xl brand-gradient p-5 text-primary-foreground shadow-[var(--shadow-soft)]">
+      <div className="flex items-center gap-4">
+        <div className="relative h-24 w-24 shrink-0">
+          <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+            <circle
+              cx="50"
+              cy="50"
+              r={radius}
+              strokeWidth="10"
+              stroke="currentColor"
+              fill="none"
+              className="opacity-20"
+            />
+            <circle
+              cx="50"
+              cy="50"
+              r={radius}
+              strokeWidth="10"
+              stroke="currentColor"
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={circ}
+              strokeDashoffset={offset}
+              className="transition-[stroke-dashoffset] duration-500"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center text-xl font-bold">
+            {progress}%
+          </div>
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-wide text-primary-foreground/80">
+            Today's progress
+          </p>
+          <p className="mt-1 text-2xl font-bold leading-tight">
+            {done} <span className="text-primary-foreground/70">/ {total}</span>
+          </p>
+          <p className="mt-1 text-xs text-primary-foreground/80">
+            {total === 0
+              ? "No tasks yet"
+              : progress === 100
+                ? "All done — nice work!"
+                : `${total - done} task${total - done === 1 ? "" : "s"} to go`}
+          </p>
+        </div>
       </div>
-      <div
-        className={cn(
-          "mt-1 text-2xl font-bold",
-          tint === "from" ? "text-primary-foreground" : "text-foreground"
-        )}
-      >
-        {count}
-      </div>
-      <div className="mt-4 flex items-center justify-between text-[10px]">
-        <span
-          className={cn(
-            tint === "from" ? "text-primary-foreground/80" : "text-muted-foreground"
-          )}
-        >
-          Progress
+    </div>
+  );
+}
+
+function CalendarCard({
+  datesWithTasks,
+  selected,
+  onSelect,
+}: {
+  datesWithTasks: Date[];
+  selected: Date | undefined;
+  onSelect: (d: Date | undefined) => void;
+}) {
+  return (
+    <div className="mt-3 rounded-3xl bg-card p-3 shadow-sm">
+      <div className="flex items-center justify-between px-2 pt-1 pb-2">
+        <h3 className="text-sm font-bold">Calendar</h3>
+        <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className="h-1.5 w-1.5 rounded-full brand-gradient" />
+          Has reminder
         </span>
-        <span
-          className={cn(
-            "font-semibold",
-            tint === "from" ? "text-primary-foreground" : "text-primary"
-          )}
-        >
-          {progress}%
-        </span>
       </div>
-      <div
-        className={cn(
-          "mt-1.5 h-1 w-full overflow-hidden rounded-full",
-          tint === "from" ? "bg-primary-foreground/20" : "bg-secondary"
-        )}
-      >
-        <div
-          className={cn(
-            "h-full rounded-full transition-all",
-            tint === "from" ? "bg-primary-foreground" : "brand-gradient"
-          )}
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+      <Calendar
+        mode="single"
+        selected={selected}
+        onSelect={onSelect}
+        modifiers={{ hasTask: datesWithTasks }}
+        modifiersClassNames={{
+          hasTask:
+            "relative after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full after:bg-primary",
+        }}
+        className={cn("p-2 pointer-events-auto")}
+      />
     </div>
   );
 }
@@ -366,11 +467,8 @@ function TaskRow({
   onToggle: () => void;
   onDelete: () => void;
 }) {
-  const date = new Date(task.created_at).toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  const due = task.due_date ? new Date(task.due_date) : null;
+  const overdue = due && !task.completed && isPast(due) && !isToday(due);
 
   return (
     <li className="task-enter group flex items-center gap-3 rounded-2xl bg-card p-3 shadow-sm transition-shadow hover:shadow-md">
@@ -395,7 +493,25 @@ function TaskRow({
         >
           {task.title}
         </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{date}</p>
+        <div className="mt-0.5 flex items-center gap-2 text-xs">
+          {due ? (
+            <span
+              className={cn(
+                "flex items-center gap-1 font-medium",
+                overdue
+                  ? "text-destructive"
+                  : isToday(due)
+                    ? "text-primary"
+                    : "text-muted-foreground"
+              )}
+            >
+              <Bell className="h-3 w-3" />
+              {isToday(due) ? "Today" : format(due, "MMM d, yyyy")}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">No reminder</span>
+          )}
+        </div>
       </div>
       <button
         onClick={onDelete}
@@ -408,9 +524,16 @@ function TaskRow({
   );
 }
 
-function EmptyState({ filter }: { filter: Filter }) {
-  const message =
-    filter === "completed"
+function EmptyState({
+  filter,
+  hasDayFilter,
+}: {
+  filter: Filter;
+  hasDayFilter: boolean;
+}) {
+  const message = hasDayFilter
+    ? "No tasks for this day"
+    : filter === "completed"
       ? "Nothing completed yet"
       : filter === "active"
         ? "All caught up!"
@@ -421,7 +544,7 @@ function EmptyState({ filter }: { filter: Filter }) {
         <ClipboardList className="h-6 w-6 text-primary" />
       </div>
       <p className="mt-3 text-sm font-semibold">{message}</p>
-      <p className="mt-1 text-xs text-muted-foreground">Tap “Add Task” to get started.</p>
+      <p className="mt-1 text-xs text-muted-foreground">Tap "Add Task" to get started.</p>
     </li>
   );
 }
