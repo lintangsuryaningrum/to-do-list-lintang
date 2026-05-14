@@ -149,9 +149,9 @@
 }
 
 :root {
-  --gradient-from: oklch(0.55 0.22 268);
-  --gradient-to: oklch(0.65 0.20 320);
-  --shadow-soft: 0 10px 40px -10px oklch(0.55 0.22 268 / 0.25);
+  --gradient-from: oklch(0.42 0.18 275);
+  --gradient-to: oklch(0.52 0.20 280);
+  --shadow-soft: 0 14px 40px -12px oklch(0.42 0.18 275 / 0.45);
   --shadow-card: 0 1px 3px oklch(0.18 0.04 265 / 0.05), 0 8px 24px -8px oklch(0.18 0.04 265 / 0.08);
 }
 
